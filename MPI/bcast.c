@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
     exit(1);
   }*/
 
-  int num_elements = 10;
+  int num_elements = 1000000;
   int num_trials = 4;
 
   MPI_Init(NULL, NULL);
@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
     total_my_bcast_time -= MPI_Wtime(); 		//Devuelve el tiempo trascurrido hasta el momento de la llamda.
     my_bcast(data, num_elements, MPI_INT, 0, MPI_COMM_WORLD);
 
-    // Synchronize again before obtaining final time
+    // Sincroniza de nuevo
     MPI_Barrier(MPI_COMM_WORLD);
     total_my_bcast_time += MPI_Wtime();
 
