@@ -7,259 +7,257 @@ its block of tasks, it should return to a condition wait. When the main thread
 completes generating tasks, it sets a global variable indicating that there will be
 no more tasks, and awakens all the threads with a condition broadcast. For the
 sake of explicitness, make your tasks linked list operations.*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include <time.h>
 #include <sys/time.h>
-
-struct list_node_s
+//////////////////////////
+typedef struct 
 {
-	int data;
-	struct list_node_s* next;
-        ///SOLUCION 2 lock individual nodes
-	pthread_mutex_t mutex;
-};
+    int Escritores;
+    int EscritoresEsp;
+    int Lectores;
+    pthread_mutex_t mutex;
+    pthread_cond_t AccesoEs;
+    pthread_cond_t AccesoLec;
+}mutex_rw;
 
+int mutex_create( mutex_rw* x){
+    x->Lectores=0;
+    x->Escritores=0;
+    x->EscritoresEsp=0;
+    pthread_cond_init(&(x->AccesoLec),NULL);
+    pthread_cond_init(&(x->AccesoEs),NULL);
+    pthread_mutex_init(&(x->mutex),NULL);
+    return 1;
+}      
+void mutex_rdlock( mutex_rw* x){//lector bloquea
+    pthread_mutex_lock(&(x->mutex));
+    while(x->Escritores > 0)///Mientras haya escritores
+        pthread_cond_wait(&(x->AccesoLec), &(x->mutex));///desbloquea el mutex y espera por la conficion de acceso lec
+    x->Lectores++;
+    pthread_mutex_unlock(&(x->mutex));   
+   
+}
+void mutex_rdunlock( mutex_rw* x){//lector desbloquea
+    pthread_mutex_lock(&(x->mutex));
+        x->Lectores--;
+        if(x->Lectores==0 && x->EscritoresEsp>0)
+            pthread_cond_signal(&(x->AccesoEs));///recomiensa ine de los hilos que esperan las condicion , si no hay lista de espera no hace nada 
+        pthread_mutex_unlock(&(x->mutex));
+}
+void mutex_wrlock( mutex_rw* x) /// escritor bloquea
+{
+        pthread_mutex_lock(&(x->mutex));
+        x->EscritoresEsp++;
+        while(x->Lectores>0 || x->Escritores>0)
+        {
+            pthread_cond_wait(&(x->AccesoEs), &(x->mutex));
+        }
+        x->EscritoresEsp--; x->Escritores++;
+        pthread_mutex_unlock(&(x->mutex));
+}
+void mutex_wrunlock( mutex_rw* x)///escritor desbloquea
+{
+        pthread_mutex_lock(&(x->mutex));
+        x->Escritores--;
+        if(x->EscritoresEsp>0)
+            pthread_cond_signal(&(x->AccesoEs));
+        pthread_cond_broadcast(&(x->AccesoLec));
+        pthread_mutex_unlock(&(x->mutex));
+}
+//////////////////////////
 double timeval_diff(struct timeval *a, struct timeval *b)
 {
   return
     (double)(a->tv_sec + (double)a->tv_usec/1000000) -
     (double)(b->tv_sec + (double)b->tv_usec/1000000);
 }
+struct list_node_s
+{
+    int data;
+    struct list_node_s* next;
+    pthread_mutex_t mutex;
+};
+
+
 int thread_count;
 struct list_node_s** head_pp;
 pthread_mutex_t mutex;
-pthread_mutex_t mutex2;
-pthread_rwlock_t rwlock;
 pthread_mutex_t head_p_mutex;
-long thread;
-long operaciones=100000;
-double member=80;//99.9;
-double insert=10;//0.05;
-double del=10;//0.05;
-struct timeval t_ini, t_fin;
-double secs;
+pthread_rwlock_t  rwlock;
+
+
 
 int MemberP(int value)
 {
-	struct list_node_s* temp_p;
-	pthread_mutex_lock(&head_p_mutex);
-	temp_p=*head_pp;
-	while(temp_p != NULL && temp_p->data<value)
-	{
-		if (temp_p->next != NULL)
-			pthread_mutex_lock(&(temp_p->next->mutex));
-		if (temp_p == *head_pp)
-			pthread_mutex_unlock(&head_p_mutex);
-		pthread_mutex_unlock(&(temp_p->mutex));
-		temp_p=temp_p->next;
-	}
-	if (temp_p == NULL || temp_p->data >value)
-	{
-		if (temp_p == *head_pp)
-			pthread_mutex_unlock(&head_p_mutex);
-		if (temp_p != NULL)
-			pthread_mutex_unlock(&(temp_p->mutex));
-		return 0;
-	}
-	else
-	{
-		if (temp_p == *head_pp)
-			pthread_mutex_unlock(&head_p_mutex);
-		pthread_mutex_unlock(&(temp_p->mutex));
-		return 1;
-	}
+    struct list_node_s* temp_p;
+    pthread_mutex_lock(&head_p_mutex);
+    temp_p=*head_pp;
+    while(temp_p != NULL && temp_p->data<value)
+    {
+        if (temp_p->next != NULL)
+        {
+            pthread_mutex_lock(&(temp_p->next->mutex));
+        }
+        if (temp_p == *head_pp)
+        {
+            pthread_mutex_unlock(&head_p_mutex);
+        }
+        pthread_mutex_unlock(&(temp_p->mutex));
+        temp_p=temp_p->next;
+    }
+    if (temp_p == NULL || temp_p->data >value)
+    {
+        if (temp_p == *head_pp)
+        {
+            pthread_mutex_unlock(&head_p_mutex);
+        }
+        if (temp_p != NULL)
+        {
+            pthread_mutex_unlock(&(temp_p->mutex));
+        }
+        return 0;
+    }
+    else
+    {
+        if (temp_p == *head_pp)
+        {
+            pthread_mutex_unlock(&head_p_mutex);
+        }
+        pthread_mutex_unlock(&(temp_p->mutex));
+        return 1;
+    }
 }
-int Member(int value)//struc list_node_s* head_p
+int Member(int value)
 {
-	struct list_node_s* curr_p=*head_pp;
-	while(curr_p!=NULL && curr_p->data < value)
-		curr_p=curr_p->next;
-	if(curr_p == NULL || curr_p->data >value)
-		return 0;
-	else
-		return 1;
+    struct list_node_s* curr_p=*head_pp;
+    while(curr_p!=NULL && curr_p->data < value)
+        curr_p=curr_p->next;
+    if(curr_p == NULL || curr_p->data >value)
+        return 0;
+    else
+        return 1;
 }
 int Insert(int value)
 {
-	struct list_node_s* curr_p= *head_pp;
-	struct list_node_s* pred_p= NULL;
-	struct list_node_s* temp_p;
-	while(curr_p != NULL && curr_p->data<value)//anterior inmediato
-	{
-		pred_p=curr_p;
-		curr_p=curr_p->next;
-	}
-	if(curr_p == NULL || curr_p->data > value)//proximo
-	{
-		temp_p=malloc(sizeof(struct list_node_s));
-		temp_p->data=value;
-		temp_p->next=curr_p;
-		if (pred_p == NULL)
-			*head_pp=temp_p;//unico elemento
-		else
-			pred_p->next=temp_p;//linkear
-		return 1;
-	}
-	else
-		return 0;
+    struct list_node_s* curr_p= *head_pp;
+    struct list_node_s* pred_p= NULL;
+    struct list_node_s* temp_p;
+    while(curr_p != NULL && curr_p->data<value)
+    {
+        pred_p=curr_p;
+        curr_p=curr_p->next;
+    }
+    if(curr_p == NULL || curr_p->data > value)
+    {
+        temp_p=malloc(sizeof(struct list_node_s));
+        temp_p->data=value;
+        temp_p->next=curr_p;
+        if (pred_p == NULL)
+            *head_pp=temp_p;
+        else
+            pred_p->next=temp_p;
+        return 1;
+    }
+    else
+        return 0;
 }
 int Delete(int value)
 {
-	struct list_node_s* curr_p=*head_pp;
-	struct list_node_s* pred_p= NULL;
-	while(curr_p != NULL && curr_p->data < value)//busca
-	{
-		pred_p=curr_p;
-		curr_p=curr_p->next;
-	}
-	if(curr_p != NULL && curr_p->data == value)//si
-	{
-		if(pred_p == NULL)//si era cabeza
-		{
-			*head_pp=curr_p->next;
-			free(curr_p);
-		}
-		else            //linkea
-		{
-			pred_p->next=curr_p->next;
-			free(curr_p);
-		}
-		return 1;
-	}
-	else					//no
-		return 0;
+    struct list_node_s* curr_p=*head_pp;
+    struct list_node_s* pred_p= NULL;
+    while(curr_p != NULL && curr_p->data < value)
+    {
+        pred_p=curr_p;
+        curr_p=curr_p->next;
+    }
+    if(curr_p != NULL && curr_p->data == value)
+    {
+        if(pred_p == NULL)
+        {
+            *head_pp=curr_p->next;
+            free(curr_p);
+        }
+        else
+        {
+            pred_p->next=curr_p->next;
+            free(curr_p);
+        }
+        return 1;
+    }
+    else
+        return 0;
 }
+void* LLamarFunc(void* rango)
+{   //Mi Estructura mutex_rw
+	//mutex_rw n;
+ 
+	//////////////////
+    long mi_rango=(long) rango;
+    printf("Thread numero %ld\n",mi_rango);
 
+    Insert((int)mi_rango);
+//    mutex_wrunlock(&n_rwlock);
 
-void* Mutex(void* r)
-{ long ops=(long) r;
-	//printf("Operaciones %li \n",ops);
-        
-	for(int j=0;j<ops*member/100;j++)
-	{	
-		pthread_mutex_lock(&mutex);		
-		Member(rand()%10000);
-		pthread_mutex_unlock(&mutex);
-	}	
-	for(int j=0;j<ops*insert/100;j++)
-	{	
-		pthread_mutex_lock(&mutex);		
-		Insert(rand()%10000);
-		pthread_mutex_unlock(&mutex);
-	}
- 	for(int j=0;j<ops*del/100;j++)
-	{	
-		pthread_mutex_lock(&mutex);		
-		Delete(rand()%10000);
-		pthread_mutex_unlock(&mutex);
-	}
- return NULL;
+   // mutex_rdlock(&n_rwlock);
+   // int numero=Member((int)mi_rango);
+   // mutex_rdunlock(&n_rwlock);
+   // printf("Presente %d\n",numero);
+    return NULL;
 }
-
-
-
-
-void* MutexNode(void* r)
-{ long ops=(long) r;
-	printf("Operaciones %li \n",ops);
-
-	for(int j=0;j<ops*member/100;j++)
-		MemberP(rand()%10000);
-	for(int j=0;j<ops*insert/100;j++)
-		Insert(rand()%10000);
- 	for(int j=0;j<ops*del/100;j++)
-		Delete(rand()%10000);
-
- return NULL;
-}
-void* RW(void* r)
-{ long ops=(long) r;
-	for(int j=0;j<ops*member/100;j++)
-	{	
-		pthread_rwlock_rdlock(&rwlock);		
-		Member(rand()%10000);
-		pthread_rwlock_unlock(&rwlock);
-	}	
-	for(int j=0;j<ops*insert/100;j++)
-	{	
-		pthread_rwlock_wrlock(&rwlock);		
-		Insert(rand()%10000);
-		pthread_rwlock_unlock(&rwlock);
-	}
- 	for(int j=0;j<ops*del/100;j++)
-	{	
-		pthread_rwlock_wrlock(&rwlock);		
-		Delete(rand()%10000);
-		pthread_rwlock_unlock(&rwlock);
-	}
-
- return NULL;
+void* Tar(void* rango)
+{   //Mi Estructura mutex_rw
+	//mutex_rw n;
+ 
+	//////////////////
+    long mi_rango=(long) rango;
+    printf("Thread numero %ld eecutandose\n",mi_rango);
+    return NULL;
 }
 int main(int argc,char* argv[])
 {
+    mutex_rw n_rwlock;
+    mutex_create(&n_rwlock);
+    long thread;
+    pthread_t* thread_handles;
+    struct list_node_s* head;
+    head=malloc(sizeof(struct list_node_s));
+    head->data=0;
+    head->next=NULL;
+    head_pp=&head;
+    thread_count=strtol(argv[1],NULL,10);
+    thread_handles=malloc (thread_count*sizeof(pthread_t));
+    struct timeval t_ini, t_fin;
+    double secs;
 
+    gettimeofday(&t_ini, NULL);
+    for(thread=0;thread<thread_count;thread++)
+    {
 	
-	pthread_t* thread_handles;
-	struct list_node_s* head;
-//cabeza
-	head=malloc(sizeof(struct list_node_s));
-	head->data=0;
-	head->next=NULL;
-	head_pp=&head;
+    	  
+	pthread_create(&thread_handles[thread],NULL,LLamarFunc,(void *)thread);
+    } 
+    mutex_wrlock(&n_rwlock);  
+    thread=0;  
+    for(int tareas=0;tareas<thread_count-1;tareas++)
+    {
+         mutex_wrunlock(&n_rwlock);
+        //pthread(&thread_handles[thread],NULL,Tar,(void *)thread);
+        pthread_join(thread_handles[thread%thread_count],NULL);
+	thread++;
+    }  
+	   
+       
 
-	thread_count=strtol(argv[1],NULL,10);
-	thread_handles=malloc (thread_count*sizeof(pthread_t));
-	
-	///1000initia keys	
-        for(int i =0; i<1000;++i)
-		Insert(i); 
-        
-        long op=operaciones/thread_count; 
+   /* for(thread=0;thread<thread_count;thread++)
+	   pthread_join(thread_handles[thread],NULL);*/
+    gettimeofday(&t_fin, NULL);
 
-///MUTEX
-        gettimeofday(&t_ini, NULL);
-	for(thread=0;thread<thread_count;thread++)
-	{
-          pthread_create(&thread_handles[thread],NULL,Mutex,(void *)op);
-          //printf("Operadora %li \n",op);
-	}
-	for(thread=0;thread<thread_count;thread++)
-		pthread_join(thread_handles[thread],NULL);
-	gettimeofday(&t_fin, NULL);
-        secs = timeval_diff(&t_fin, &t_ini);
-	printf("%.16g Mutex segundos\n", secs );
-	free(thread_handles);
-
-///MUTEX NODE
-	gettimeofday(&t_ini, NULL);
-	for(thread=0;thread<thread_count;thread++)
-	{
-          pthread_create(&thread_handles[thread],NULL,MutexNode,(void *)op);
-          //printf("Operadora %li \n",op);
-	}
-	for(thread=0;thread<thread_count;thread++)
-		pthread_join(thread_handles[thread],NULL);
-	gettimeofday(&t_fin, NULL);
-	 secs = timeval_diff(&t_fin, &t_ini);
-	printf("%.16g MutexNODE segundos\n", secs );
-	free(thread_handles);
- /*
-///Read-Write
-	gettimeofday(&t_ini, NULL);
-	for(thread=0;thread<thread_count;thread++)
-	{//printf("Operadora %li \n",op);
-          pthread_create(&thread_handles[thread],NULL,RW,(void *)op);
-          //
-	}
-        for(thread=0;thread<thread_count;thread++)
-		pthread_join(thread_handles[thread],NULL);
-	gettimeofday(&t_fin, NULL);
-	secs = timeval_diff(&t_fin, &t_ini);
-	printf("%.16g Read-Write segundos\n", secs );
-	free(thread_handles);
-                
-  */
-	return 0;
+    secs = timeval_diff(&t_fin, &t_ini);
+    printf("%.16g millisegundos\n", secs * 1000.0);
+    free(thread_handles);
+    return 0;
 }
