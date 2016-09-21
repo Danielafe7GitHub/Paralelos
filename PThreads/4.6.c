@@ -29,24 +29,22 @@ int mutex_create( mutex_rw* x){
     pthread_mutex_init(&(x->mutex),NULL);
     return 1;
 }      
-void mutex_rdlock( mutex_rw* x){
+void mutex_rdlock( mutex_rw* x){//lector bloquea
     pthread_mutex_lock(&(x->mutex));
-    while(x->Escritores > 0)
-        {
-            pthread_cond_wait(&(x->AccesoLec), &(x->mutex));
-        }
+    while(x->Escritores > 0)///Mientras haya escritores
+        pthread_cond_wait(&(x->AccesoLec), &(x->mutex));///desbloquea el mutex y espera por la conficion de acceso lec
     x->Lectores++;
     pthread_mutex_unlock(&(x->mutex));   
    
 }
-void mutex_rdunlock( mutex_rw* x){
+void mutex_rdunlock( mutex_rw* x){//lector desbloquea
     pthread_mutex_lock(&(x->mutex));
         x->Lectores--;
         if(x->Lectores==0 && x->EscritoresEsp>0)
-            pthread_cond_signal(&(x->AccesoEs));
+            pthread_cond_signal(&(x->AccesoEs));///recomiensa ine de los hilos que esperan las condicion , si no hay lista de espera no hace nada 
         pthread_mutex_unlock(&(x->mutex));
 }
-void mutex_wrlock( mutex_rw* x)
+void mutex_wrlock( mutex_rw* x) /// escritor bloquea
 {
         pthread_mutex_lock(&(x->mutex));
         x->EscritoresEsp++;
@@ -57,7 +55,7 @@ void mutex_wrlock( mutex_rw* x)
         x->EscritoresEsp--; x->Escritores++;
         pthread_mutex_unlock(&(x->mutex));
 }
-void mutex_wrunlock( mutex_rw* x)
+void mutex_wrunlock( mutex_rw* x)///escritor desbloquea
 {
         pthread_mutex_lock(&(x->mutex));
         x->Escritores--;
@@ -196,14 +194,17 @@ void* LLamarFunc(void* rango)
     mutex_create(&n_rwlock);
 	//////////////////
     long mi_rango=(long) rango;
-    printf("Soy el thread %ld\n",mi_rango);
+    printf("Thread numero %ld\n",mi_rango);
+
     mutex_wrlock(&n_rwlock);
     Insert((int)mi_rango);
     mutex_wrunlock(&n_rwlock);
+
     mutex_rdlock(&n_rwlock);
     int numero=Member((int)mi_rango);
     mutex_rdunlock(&n_rwlock);
-    printf("Mi numero %d\n",numero);
+
+    printf("Presente %d\n",numero);
     return NULL;
 }
 int main(int argc,char* argv[])
@@ -220,18 +221,17 @@ int main(int argc,char* argv[])
     thread_handles=malloc (thread_count*sizeof(pthread_t));
     struct timeval t_ini, t_fin;
     double secs;
+
     gettimeofday(&t_ini, NULL);
     for(thread=0;thread<thread_count;thread++)
-    {
-        pthread_create(&thread_handles[thread],NULL,LLamarFunc,(void *)thread);
-    }
+	   pthread_create(&thread_handles[thread],NULL,LLamarFunc,(void *)thread);
+	   
     for(thread=0;thread<thread_count;thread++)
-    {
-        pthread_join(thread_handles[thread],NULL);
-    }
+	   pthread_join(thread_handles[thread],NULL);
     gettimeofday(&t_fin, NULL);
+
     secs = timeval_diff(&t_fin, &t_ini);
-    printf("%.16g milliseconds\n", secs * 1000.0);
+    printf("%.16g millisegundos\n", secs * 1000.0);
     free(thread_handles);
     return 0;
 }
