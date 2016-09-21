@@ -192,21 +192,17 @@ int Delete(int value)
 void* LLamarFunc(void* rango)
 {   //Mi Estructura mutex_rw
 	//mutex_rw n;
-	mutex_rw n_rwlock;
-	mutex_create(&n_rwlock);
+    mutex_rw n_rwlock;
+    mutex_create(&n_rwlock);
 	//////////////////
     long mi_rango=(long) rango;
     printf("Soy el thread %ld\n",mi_rango);
-    //pthread_rwlock_wrlock(&rwlock);
     mutex_wrlock(&n_rwlock);
     Insert((int)mi_rango);
     mutex_wrunlock(&n_rwlock);
-    //pthread_rwlock_unlock(&rwlock);
-    //pthread_rwlock_rdlock(&rwlock);
     mutex_rdlock(&n_rwlock);
     int numero=Member((int)mi_rango);
     mutex_rdunlock(&n_rwlock);
-    //pthread_rwlock_unlock(&rwlock);
     printf("Mi numero %d\n",numero);
     return NULL;
 }
