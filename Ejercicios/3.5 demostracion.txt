@@ -1,0 +1,20 @@
+3.5 En un árbol binario , hay una única ruta más corta de un nodo a la raíz.
+ La longitud de esta ruta es a menudo llamada profundidad del nodo. 
+ Un árbol binario en el cual cada nodo que no es hoja tiene dos hijos es llamado árbol binario lleno,
+ y un árbol binario lleno en el cual  cada hoja tiene la misma profundidad es a veces llamado 
+ árbol binario completo. Mirar la figura 3.14. Use el principio de inducción matemática para probar 
+ que si T es un árbol binario completo con n hojas, entonces la profundidad de la hojas es log2 (n).
+
+	Caso base
+	Si H = 0, significa que el arbol binario solo tiene un nodo, y este nodo es la hoja.
+	2^0=1 así que satisface la hipótesis.
+
+	Inducción
+	Para algun k mayor o igual que 0, todos los arboles binarios completos, de altura menor
+	o igual a k, tienen exactamente 2^k hojas.
+
+	Prueba
+	Si nuestro arbol binario completo T tiene altura k+1, entonces los sub-arboles
+	izquierdo y derecho tienen altura k cada uno, y si T tiene 2^(k+1) hojas, cada sub-arbol tendrá
+	2^k hojas.
+	Por consiguiente 2^k + 2^k=2^(k+1), y esto cumple con la hipótesis.
