@@ -3,7 +3,7 @@ dígitos decimales. Supóngase también que los registros de punto flotante de l
 almacenar cuatro dígitos decimales, y que después de cualquier operación de punto flotante,
 el resultado se redondea a tres dígitos decimales antes de ser almacenado. Ahora supongamos 
 que un programa en C declara una matriz de una de la siguiente manera:
-	float a[] = {4.0, 3.0, 3.0, 1000.0};
+	float a[] = {2.0, 2.0, 4.0, 1000.0};
 	
 a. ¿Cuál es la salida del siguiente bloque de código si se ejecuta en el Bleeblon?
 	int i; 
