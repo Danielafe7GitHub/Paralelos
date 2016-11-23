@@ -116,7 +116,7 @@ int main() {
 	cout <<"Resultado"<<endl;
 	//matrizXvector(A, B, C, fila);
 	matrizXmatriz(A, B, C, fila);
-	mostrarM(C, 1, columna);
+	mostrarM(C, fila, columna);
 
 	system("PAUSE");
 	exit(0);
