@@ -1,4 +1,4 @@
-#include <stdio.h>
+##include <stdio.h>
 #include <device_launch_parameters.h>
 #include <cuda_runtime.h>
 #include <cuda.h>
@@ -15,7 +15,7 @@ void vecMultKernel(float* A, float* B, float* C, int n){
 			C[i] += A[j*n + i] * B[j];
 	}
 }
-__global__ void vecMultKernel2(float* d_M, float* d_N, float* d_P, int width){
+__global__ void MatrixMultKernel(float* d_M, float* d_N, float* d_P, int width){
 	__shared__ float Mds[TILE_WIDTH][TILE_WIDTH];
 	__shared__ float Nds[TILE_WIDTH][TILE_WIDTH];
 	int bx = blockIdx.x; int by = blockIdx.y;
@@ -70,7 +70,7 @@ void matrizXmatriz(float* A, float* B, float* C, int n) {
 	cudaMalloc((void **)&d_C, sizevect);
 
 	//Llamada Kernel
-	vecMultKernel2 <<< ceil((n*n) / 256.0), 256 >>> (d_A, d_B, d_C, n);
+	MatrixMultKernel <<< ceil((n*n) / 256.0), 256 >>> (d_A, d_B, d_C, n);
 	//ceil se asegura de que tener suficientes hilos para cubrir los elementos
 
 	//copiar de Device a Host
@@ -103,7 +103,7 @@ int main() {
 	{
 		A[i] = i;
 	}
-	for (int i = 0; i < columna; i++)
+	for (int i = 0; i < fila*columna; i++)
 	{
 		B[i] = i;
 	}
