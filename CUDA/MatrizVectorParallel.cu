@@ -15,7 +15,24 @@ void vecMultKernel(float* A, float* B, float* C, int n){
 			C[i] += A[j*n + i] * B[j];
 	}
 }
-__global__ void MatrixMultKernel(float* d_M, float* d_N, float* d_P, int width){
+__global__ void MatrixMulKernel(float* d_M, float* d_N, float* d_P, int Width) 
+{
+	// Calculate the row index of the d_Pelement and d_M
+	int Row = blockIdx.y*blockDim.y+threadIdx.y;
+	// Calculate the column index of d_P and d_N
+	int Col = blockIdx.x*blockDim.x+threadIdx.x;
+	if ((Row < Width) && (Col < Width)) 
+	{
+		float Pvalue = 0;
+		// each thread computes one element of the block sub-matrix
+		for (intk = 0; k < Width; ++k) 
+		{
+			Pvalue += d_M[Row*Width+k]*d_N[k*Width+Col];
+		}
+		d_P[Row*Width+Col] = Pvalue;
+	}
+}
+__global__ void MatrixMulKernelTiles(float* d_M, float* d_N, float* d_P, int width){
 	__shared__ float Mds[TILE_WIDTH][TILE_WIDTH];
 	__shared__ float Nds[TILE_WIDTH][TILE_WIDTH];
 	int bx = blockIdx.x; int by = blockIdx.y;
@@ -70,7 +87,29 @@ void matrizXmatriz(float* A, float* B, float* C, int n) {
 	cudaMalloc((void **)&d_C, size);
 
 	//Llamada Kernel
-	MatrixMultKernel <<< ceil((n*n) / 256.0), 256 >>> (d_A, d_B, d_C, n);
+	MatrixMulKernel <<< ceil((n*n) / 256.0), 256 >>> (d_A, d_B, d_C, n);
+	//ceil se asegura de que tener suficientes hilos para cubrir los elementos
+
+	//copiar de Device a Host
+	cudaMemcpy(C, d_C, size, cudaMemcpyDeviceToHost);
+
+	//liberar memoria
+	cudaFree(d_A); cudaFree(d_B); cudaFree(d_C);
+}
+
+void matrizXmatrizTiles(float* A, float* B, float* C, int n) {
+	int size = n * n * sizeof(float);
+	int sizevect = n * n * sizeof(float);
+	float *d_A, *d_B, *d_C;
+	///Redimensionar y copiar de Host a Device
+	cudaMalloc((void **)&d_A, size);
+	cudaMemcpy(d_A, A, size, cudaMemcpyHostToDevice);
+	cudaMalloc((void **)&d_B, size);
+	cudaMemcpy(d_B, B, sizevect, cudaMemcpyHostToDevice);
+	cudaMalloc((void **)&d_C, size);
+
+	//Llamada Kernel
+	MatrixMulKernelTiles <<< ceil((n*n) / 256.0), 256 >>> (d_A, d_B, d_C, n);
 	//ceil se asegura de que tener suficientes hilos para cubrir los elementos
 
 	//copiar de Device a Host
@@ -116,6 +155,10 @@ int main() {
 	cout <<"Resultado"<<endl;
 	//matrizXvector(A, B, C, fila);
 	matrizXmatriz(A, B, C, fila);
+	mostrarM(C, fila , columna);
+
+	cout <<"Resultado Tiles"<<endl;
+	matrizXmatrizTiles(A, B, C, fila);
 	mostrarM(C, fila , columna);
 
 	system("PAUSE");
