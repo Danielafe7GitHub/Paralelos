@@ -97,8 +97,8 @@ int main() {
 	cin>>fila;
 	columna=fila;
 	float* A = (float*)malloc(fila*columna*sizeof(float));
-	float* B = (float*)malloc(fila*sizeof(float));
-	float* C = (float*)malloc(fila*sizeof(float));
+	float* B = (float*)malloc(fila*columna*sizeof(float));
+	float* C = (float*)malloc(fila*columna*sizeof(float));
 	for (int i = 0; i < fila*columna; i++)
 	{
 		A[i] = i;
@@ -116,7 +116,7 @@ int main() {
 	cout <<"Resultado"<<endl;
 	//matrizXvector(A, B, C, fila);
 	matrizXmatriz(A, B, C, fila);
-	mostrarM(C, fila, columna);
+	mostrarM(C, fila , columna);
 
 	system("PAUSE");
 	exit(0);
