@@ -65,16 +65,16 @@ void matrizXmatriz(float* A, float* B, float* C, int n) {
 	///Redimensionar y copiar de Host a Device
 	cudaMalloc((void **)&d_A, size);
 	cudaMemcpy(d_A, A, size, cudaMemcpyHostToDevice);
-	cudaMalloc((void **)&d_B, sizevect);
+	cudaMalloc((void **)&d_B, size);
 	cudaMemcpy(d_B, B, sizevect, cudaMemcpyHostToDevice);
-	cudaMalloc((void **)&d_C, sizevect);
+	cudaMalloc((void **)&d_C, size);
 
 	//Llamada Kernel
 	MatrixMultKernel <<< ceil((n*n) / 256.0), 256 >>> (d_A, d_B, d_C, n);
 	//ceil se asegura de que tener suficientes hilos para cubrir los elementos
 
 	//copiar de Device a Host
-	cudaMemcpy(C, d_C, sizevect, cudaMemcpyDeviceToHost);
+	cudaMemcpy(C, d_C, size, cudaMemcpyDeviceToHost);
 
 	//liberar memoria
 	cudaFree(d_A); cudaFree(d_B); cudaFree(d_C);
