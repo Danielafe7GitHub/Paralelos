@@ -108,9 +108,9 @@ int main() {
 		B[i] = i;
 	}
 
-	cout<<" vector "<<endl;
-	mostrarM(B, 1, columna);
-	cout<<" * matriz "<<endl;
+	cout<<" matriz B "<<endl;
+	mostrarM(B, fila, columna);
+	cout<<" * matriz A "<<endl;
 	mostrarM(A, fila, columna);
 	
 	cout <<"Resultado"<<endl;
