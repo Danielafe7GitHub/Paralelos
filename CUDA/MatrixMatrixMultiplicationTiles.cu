@@ -25,14 +25,14 @@ __global__ void MatrixMulKernel(float* d_M, float* d_N, float* d_P, int Width)
 	{
 		float Pvalue = 0;
 		// each thread computes one element of the block sub-matrix
-		for (intk = 0; k < Width; ++k) 
+		for (int k = 0; k < Width; ++k) 
 		{
 			Pvalue += d_M[Row*Width+k]*d_N[k*Width+Col];
 		}
 		d_P[Row*Width+Col] = Pvalue;
 	}
 }
-__global__ void MatrixMulKernelTiles(float* d_M, float* d_N, float* d_P, int width){
+__global__ void MatrixMulKernelTiles(float* d_M, float* d_N, float* d_P, int Width){
 	__shared__ float Mds[TILE_WIDTH][TILE_WIDTH];
 	__shared__ float Nds[TILE_WIDTH][TILE_WIDTH];
 	int bx = blockIdx.x; int by = blockIdx.y;
@@ -152,10 +152,10 @@ int main() {
 	cout<<" * matriz A "<<endl;
 	mostrarM(A, fila, columna);
 	
-	/*cout <<"Resultado"<<endl;
+	cout <<"Resultado"<<endl;
 	//matrizXvector(A, B, C, fila);
 	matrizXmatriz(A, B, C, fila);
-	mostrarM(C, fila , columna);*/
+	mostrarM(C, fila , columna);
 
 	cout <<"Resultado Tiles"<<endl;
 	matrizXmatrizTiles(A, B, C, fila);
