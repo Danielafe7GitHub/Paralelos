@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <mpi.h>
 
-#define N 100
+#define N 64
 int ADJMATRIX[N][N];           // matriz A  
 int DEGREE[N];                // matriz DEGREE
 int COLOR[N];
@@ -25,9 +25,9 @@ int computeNeighbor(int, int, int);
 int main(int argc, char ** argv)
 { 
   int i, j, n, rank, size;
- 
+ double start_time, end_time,runtime;
   MPI_Status status;
-  
+  start_time = MPI_Wtime();
   MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -183,6 +183,9 @@ for(int j=0;j<N;j++)
       printf("\n"); 
     }*/
   printf("lamdaxdx %d ",lambda);
+end_time= MPI_Wtime();
+runtime=end_time - start_time;
+printf("Codigo se ejecuto en %f segundos\n",runtime);
 
   return 0;
 }
